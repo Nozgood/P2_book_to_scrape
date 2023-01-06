@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 links = []
 books = []
 
-for i in range(1, 11, 1):
+for i in range(1, 51, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
     if res.ok:
