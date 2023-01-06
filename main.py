@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 links = []
 books = []
 
+# loop to get all the pages links
 for i in range(1, 51, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
@@ -18,6 +19,7 @@ for i in range(1, 51, 1):
     else:
         print("bad res from fetching")
 
+# loop to get all the books
 for i in range(0, len(links), 1):
     print(i)
     res = requests.get(links[i])
@@ -51,6 +53,7 @@ for i in range(0, len(links), 1):
         # get the product description
         pTags = bookPage.findAll("p")
         description = pTags[3].text
+        # TODO: format the description
 
         # get the category
         breadCrumb = bookPage.find("ul", class_="breadcrumb")
