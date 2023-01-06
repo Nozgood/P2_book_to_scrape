@@ -1,10 +1,11 @@
 import requests
+import csv
 from bs4 import BeautifulSoup
 
 links = []
 books = []
 
-for i in range(1, 2, 1):
+for i in range(1, 11, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
     if res.ok:
@@ -31,7 +32,7 @@ for i in range(0, len(links), 1):
         # Get the title of the book
         titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
 
-        # Get the UPC, price (excl/incl tax), availability information from the html page
+        # Get the UPC, price (excl/incl tax), availability information from the table in the html page
         productInfoTable = bookPage.find("table")
         allTr = productInfoTable.findAll("tr")
         for tr in allTr:
@@ -39,9 +40,9 @@ for i in range(0, len(links), 1):
             if titleTr == "UPC":
                 upcValue = tr.find("td").string
             elif titleTr == "Price (excl. tax)":
-                priceWithTax = tr.find("td").string
+                priceWithTax = tr.find("td").string.replace("Â", "")
             elif titleTr == "Price (incl. tax)":
-                priceWithoutTax = tr.find("td").string
+                priceWithoutTax = tr.find("td").string.replace("Â", "")
             elif titleTr == "Availability":
                 availabilitySentence = tr.find("td").string.split("(")
                 sentenceSplit = availabilitySentence[1].split()
@@ -49,13 +50,12 @@ for i in range(0, len(links), 1):
 
         # get the product description
         pTags = bookPage.findAll("p")
-        description = pTags[3].string
+        description = pTags[3].text
 
         # get the category
         breadCrumb = bookPage.find("ul", class_="breadcrumb")
         liBreadCrumb = breadCrumb.findAll("li")
-        category = liBreadCrumb[2].text
-        print(category)
+        category = liBreadCrumb[2].text.replace("\n", "").replace("ô", 'o')
 
         # get the review rating
         pTagStars = bookPage.find("p", class_="star-rating")
@@ -66,20 +66,29 @@ for i in range(0, len(links), 1):
         imgTag = bookPage.find("div", class_="item active").find("img")
         imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
 
-        # initiate the dictionary # at the end it will be replace by csv export
-        book = dict(
-            url=links[i],
-            title=titleBook,
-            upc=upcValue,
-            price_including_tax=priceWithTax,
-            price_excluding_tax=priceWithoutTax,
-            number_available=availableValue,
-            image_url=imgUrl,
-            product_description=description,
-            category=category,
-            review_rating=reviewRating,
-        )
+        # TODO: replace the dictionary by the sending to csv file (do i have to store before all the datas ??
+
+        book = [
+            links[i],
+            titleBook,
+            upcValue,
+            priceWithTax,
+            priceWithoutTax,
+            availableValue,
+            imgUrl,
+            description,
+            category,
+            reviewRating,
+        ]
         books.append(book)
     else:
         print("bad res from fetching book url")
-print(books)
+
+
+headers = ["product_page_url", "title", "upc", "price_including_tax", "price_exluding_tax", "number_available", "image_url", "description", "category", "review_rating"]
+with open('test.csv', 'w') as csv_file:
+    writer = csv.writer(csv_file, delimiter=",")
+    writer.writerow(headers)
+    for book in books:
+        writer.writerow(book)
+    print("test.csv created")
