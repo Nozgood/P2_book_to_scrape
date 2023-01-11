@@ -110,8 +110,11 @@ with open('test.csv', 'w') as csv_file:
         writer.writerow(book)
     print("test.csv created")
 
+
+increment = 0
 for book in books:
-    finalPath = os.path.join(imgDirPath + book[10].replace(" ", "-") + ".jpg")
+    increment += 1
+    finalPath = os.path.join(imgDirPath + str(increment) + "-" + book[10].replace(" ", "-") + ".jpg")
     with open(finalPath, "wb") as file:
         imgScrap = requests.get(book[6])
         if res.ok:
