@@ -1,12 +1,14 @@
 import requests
 import csv
+import os
 from bs4 import BeautifulSoup
 
 links = []
 books = []
+imgDirPath = "/Users/nowfeel/Python/book_to_scrape/images/" # path to save img files
 
 # loop to get all the pages links
-for i in range(1, 51, 1):
+for i in range(1, 3, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
     if res.ok:
@@ -67,6 +69,7 @@ for i in range(0, len(links), 1):
 
         # get the image url
         imgTag = bookPage.find("div", class_="item active").find("img")
+        imgTitle = imgTag["alt"]
         imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
 
         # TODO: replace the dictionary by the sending to csv file (do i have to store before all the datas ??
@@ -82,6 +85,7 @@ for i in range(0, len(links), 1):
             description,
             category,
             reviewRating,
+            imgTitle,
         ]
         books.append(book)
     else:
@@ -105,3 +109,10 @@ with open('test.csv', 'w') as csv_file:
     for book in books:
         writer.writerow(book)
     print("test.csv created")
+
+for book in books:
+    finalPath = os.path.join(imgDirPath + book[10].replace(" ", "-") + ".jpg")
+    with open(finalPath, "wb") as file:
+        imgScrap = requests.get(book[6])
+        if res.ok:
+            file.write(imgScrap.content)
