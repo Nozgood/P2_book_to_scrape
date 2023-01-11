@@ -87,8 +87,18 @@ for i in range(0, len(links), 1):
     else:
         print("bad res from fetching book url")
 
+headers = ["product_page_url",
+           "title",
+           "upc",
+           "price_including_tax",
+           "price_excluding_tax",
+           "number_available",
+           "image_url",
+           "description",
+           "category",
+           "review_rating"
+           ]
 
-headers = ["product_page_url", "title", "upc", "price_including_tax", "price_exluding_tax", "number_available", "image_url", "description", "category", "review_rating"]
 with open('test.csv', 'w') as csv_file:
     writer = csv.writer(csv_file, delimiter=",")
     writer.writerow(headers)
