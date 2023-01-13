@@ -3,12 +3,27 @@ import csv
 import os
 from bs4 import BeautifulSoup
 
+# init variables
 links = []
 books = []
-imgDirPath = "/Users/nowfeel/Python/book_to_scrape/images/" # path to save img files
+dataDirPath = "/Users/nowfeel/Python/book_to_scrape/data/" # path to save img files
+imgDirPath = "/Users/nowfeel/Python/book_to_scrape/data/images/"
+bookImgIndex = 0
 
-# loop to get all the pages links
-for i in range(1, 3, 1):
+headers = ["product_page_url",
+           "title",
+           "upc",
+           "price_including_tax",
+           "price_excluding_tax",
+           "number_available",
+           "image_url",
+           "description",
+           "category",
+           "review_rating",
+           ]
+
+# loop to get all the pages links (prepare pages links to Extract)
+for i in range(1, 2, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
     if res.ok:
@@ -22,6 +37,7 @@ for i in range(1, 3, 1):
         print("bad res from fetching")
 
 # loop to get all the books
+# Extract and Transform
 for i in range(0, len(links), 1):
     print(i)
     res = requests.get(links[i])
@@ -33,10 +49,10 @@ for i in range(0, len(links), 1):
         imgUrl = ""
         bookPage = BeautifulSoup(res.text, "html.parser")
 
-        # Get the title of the book
+        # Get the title of the book and format it to string
         titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
 
-        # Get the UPC, price (excl/incl tax), availability information from the table in the html page
+        # Get the UPC, price (excl/incl tax), availability information from the table in the html page + format currency
         productInfoTable = bookPage.find("table")
         allTr = productInfoTable.findAll("tr")
         for tr in allTr:
@@ -55,7 +71,6 @@ for i in range(0, len(links), 1):
         # get the product description
         pTags = bookPage.findAll("p")
         description = pTags[3].text
-        # TODO: format the description
 
         # get the category
         breadCrumb = bookPage.find("ul", class_="breadcrumb")
@@ -72,8 +87,6 @@ for i in range(0, len(links), 1):
         imgTitle = imgTag["alt"]
         imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
 
-        # TODO: replace the dictionary by the sending to csv file (do i have to store before all the datas ??
-
         book = [
             links[i],
             titleBook,
@@ -85,37 +98,27 @@ for i in range(0, len(links), 1):
             description,
             category,
             reviewRating,
-            imgTitle,
         ]
         books.append(book)
     else:
         print("bad res from fetching book url")
 
-headers = ["product_page_url",
-           "title",
-           "upc",
-           "price_including_tax",
-           "price_excluding_tax",
-           "number_available",
-           "image_url",
-           "description",
-           "category",
-           "review_rating"
-           ]
-
-with open('test.csv', 'w') as csv_file:
+# Loading datas
+with open('/Users/nowfeel/Python/book_to_scrape/data/scraps-books.csv', 'w') as csv_file:
     writer = csv.writer(csv_file, delimiter=",")
     writer.writerow(headers)
     for book in books:
         writer.writerow(book)
     print("test.csv created")
 
-
-increment = 0
 for book in books:
-    increment += 1
-    finalPath = os.path.join(imgDirPath + str(increment) + "-" + book[10].replace(" ", "-") + ".jpg")
-    with open(finalPath, "wb") as file:
+    bookImgIndex += 1
+    print(bookImgIndex)
+    test = os.path.join(imgDirPath + str(bookImgIndex) + "-" + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
+    with open(test, "wb") as file:
         imgScrap = requests.get(book[6])
         if res.ok:
             file.write(imgScrap.content)
+        else:
+            print("error during image's download")
+
