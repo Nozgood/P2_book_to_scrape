@@ -23,7 +23,7 @@ headers = ["product_page_url",
            ]
 
 # loop to get all the pages links (prepare pages links to Extract)
-for i in range(1, 2, 1):
+for i in range(1, 51, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
     if res.ok:
