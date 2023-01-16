@@ -47,7 +47,7 @@ for i in range(0, len(links), 1):
         priceWithoutTax = ""
         availableValue = ""
         imgUrl = ""
-        bookPage = BeautifulSoup(res.text, "html.parser")
+        bookPage = BeautifulSoup(res.content, "html.parser")
 
         # Get the title of the book and format it to string
         titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
