@@ -22,6 +22,17 @@ headers = ["product_page_url",
            "review_rating",
            ]
 
+poetryCat = 0
+historicalFiction = 0
+fiction = 0
+mystery = 0
+history = 0
+youngAdult = 0
+business = 0
+default = 0
+poetry = 0
+
+
 # loop to get all the pages links (prepare pages links to Extract)
 for i in range(1, 2, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
@@ -39,7 +50,6 @@ for i in range(1, 2, 1):
 # loop to get all the books
 # Extract and Transform
 for i in range(0, len(links), 1):
-    print(i)
     res = requests.get(links[i])
     if res.ok:
         upcValue = ""
@@ -51,7 +61,7 @@ for i in range(0, len(links), 1):
 
         # Get the title of the book and format it to string
         titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
-
+        print("livre numéro " + str(i + 1) + " : " + titleBook)
         # Get the UPC, price (excl/incl tax), availability information from the table in the html page + format currency
         productInfoTable = bookPage.find("table")
         allTr = productInfoTable.findAll("tr")
@@ -76,6 +86,9 @@ for i in range(0, len(links), 1):
         breadCrumb = bookPage.find("ul", class_="breadcrumb")
         liBreadCrumb = breadCrumb.findAll("li")
         category = liBreadCrumb[2].text.replace("\n", "").replace("ô", 'o')
+        if category == "Poetry":
+            poetry += 1
+        i
 
         # get the review rating
         pTagStars = bookPage.find("p", class_="star-rating")
@@ -109,11 +122,12 @@ with open('/Users/nowfeel/Python/book_to_scrape/data/scraps-books.csv', 'w') as 
     writer.writerow(headers)
     for book in books:
         writer.writerow(book)
-    print("csv file created")
+    print("\n ------------ fichier csv crée ------------ \n")
+    print("livres dans la catégorie poésie : " + str(poetry))
 
 for book in books:
     bookImgIndex += 1
-    print(bookImgIndex)
+    print("image du livre " + book[1] + " téléchargée")
     test = os.path.join(imgDirPath + str(bookImgIndex) + "-" + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
     with open(test, "wb") as file:
         imgScrap = requests.get(book[6])
