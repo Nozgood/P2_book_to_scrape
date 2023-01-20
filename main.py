@@ -23,7 +23,7 @@ headers = ["product_page_url",
            ]
 
 # loop to get all the pages links (prepare pages links to Extract)
-for i in range(1, 51, 1):
+for i in range(1, 2, 1):
     parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
     res = requests.get(parentUrl)
     if res.ok:
@@ -109,7 +109,7 @@ with open('/Users/nowfeel/Python/book_to_scrape/data/scraps-books.csv', 'w') as 
     writer.writerow(headers)
     for book in books:
         writer.writerow(book)
-    print("test.csv created")
+    print("csv file created")
 
 for book in books:
     bookImgIndex += 1
