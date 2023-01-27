@@ -1,15 +1,12 @@
 import requests
-import csv
 import os
+import csv
 from bs4 import BeautifulSoup
 
+# TODO: AJOUTER LE PATH DATAS EN VARIABLE D'ENVIRONNEMENT
 # init variables
-links = []
-books = []
-dataDirPath = "/Users/nowfeel/Python/book_to_scrape/data/"
-imgDirPath = "/Users/nowfeel/Python/book_to_scrape/data/images/"
-bookImgIndex = 0
-
+parentUrl = "https://books.toscrape.com/"
+categoriesLinks = []
 headers = ["product_page_url",
            "title",
            "upc",
@@ -21,102 +18,163 @@ headers = ["product_page_url",
            "category",
            "review_rating",
            ]
+books = []
 
-# loop to get all the pages links (prepare pages links to Extract)
-for i in range(1, 51, 1):
-    parentUrl = "https://books.toscrape.com/catalogue/page-" + str(i) + ".html"
-    res = requests.get(parentUrl)
-    if res.ok:
-        page = BeautifulSoup(res.text, 'html.parser')
-        divLink = page.findAll("div", class_="image_container")
-        for singleDiv in divLink:
-            aTag = singleDiv.find("a")
-            link = "https://books.toscrape.com/catalogue/" + aTag["href"]
-            links.append(link)
-    else:
-        print("bad res from fetching")
+# Getting the categories
+homeUrl = "https://books.toscrape.com/index.html"
+res = requests.get(homeUrl)
+if res.ok:
+    indexPage = BeautifulSoup(res.content, "html.parser")
+    categoriesContainer = indexPage.find("ul", class_="nav nav-list")
+    categoriesList = categoriesContainer.find("ul").findAll("li")
+    for i in range(len(categoriesList)):
+        categoriesLinks.append(categoriesList[i].find("a")["href"])
+else:
+    print("bad response from fetching")
 
-# loop to get all the books
-# Extract and Transform
-for i in range(0, len(links), 1):
-    res = requests.get(links[i])
-    if res.ok:
-        upcValue = ""
-        priceWithTax = ""
-        priceWithoutTax = ""
-        availableValue = ""
-        imgUrl = ""
-        bookPage = BeautifulSoup(res.content, "html.parser")
+# Scrap for each category
+for i in range(len(categoriesLinks)):
+    categoryReq = requests.get(parentUrl + categoriesLinks[i])
+    categoryTitleStr = str(categoriesLinks[i]).split("/")[3]
+    if categoryReq.ok:
+        categoryPage = BeautifulSoup(categoryReq.content, "html.parser")
+        categoryTitle = categoryPage.find("div", class_="page-header action").find("h1").text
+        csvFileName = "scraps-books-" + categoryTitle + ".csv"
+        imgDirPath = "/Users/nowfeel/Python/book_to_scrape/data/images/" + categoryTitle + "/"
+        numberBooksCategory = int(categoryPage.find("form", class_="form-horizontal").find("strong").text)
+        if numberBooksCategory < 21:
+            allArticles = categoryPage.find("ol", class_="row").findAll("article", class_="product_pod")
+            # extract the link for each book
+            for article in allArticles:
+                linkBook = article.find("div", class_="image_container").find("a")["href"].split("../")
+                formatLinkBook = parentUrl + "catalogue/" + linkBook[3]
+                bookReq = requests.get(formatLinkBook)
+                if bookReq.ok:
+                    bookPage = BeautifulSoup(bookReq.content, "html.parser")
+                    upcValue = ""
+                    priceWithTax = ""
+                    priceWithoutTax = ""
+                    availableValue = ""
+                    imgUrl = ""
+                    titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
+                    productInfoTable = bookPage.find("table")
+                    allTr = productInfoTable.findAll("tr")
+                    for tr in allTr:
+                        titleTr = tr.find("th").string
+                        if titleTr == "UPC":
+                            upcValue = tr.find("td").string
+                        elif titleTr == "Price (excl. tax)":
+                            priceWithTax = tr.find("td").string
+                        elif titleTr == "Price (incl. tax)":
+                            priceWithoutTax = tr.find("td").string
+                        elif titleTr == "Availability":
+                            availabilitySentence = tr.find("td").string.split("(")
+                            sentenceSplit = availabilitySentence[1].split()
+                            availableValue = sentenceSplit[0]
+                    pTags = bookPage.findAll("p")
+                    description = pTags[3].text
+                    breadCrumb = bookPage.find("ul", class_="breadcrumb")
+                    category = breadCrumb.findAll("a")[2].text
+                    pTagStars = bookPage.find("p", class_="star-rating")
+                    classPTagStars = pTagStars["class"]
+                    reviewRating = classPTagStars[1]
+                    imgTag = bookPage.find("div", class_="item active").find("img")
+                    imgTitle = imgTag["alt"]
+                    imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
 
-        # Get the title of the book and format it to string
-        titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
-        print("Book number " + str(i + 1) + " : " + titleBook)
-        # Get the UPC, price (excl/incl tax), availability information from the table in the html page + format currency
-        productInfoTable = bookPage.find("table")
-        allTr = productInfoTable.findAll("tr")
-        for tr in allTr:
-            titleTr = tr.find("th").string
-            if titleTr == "UPC":
-                upcValue = tr.find("td").string
-            elif titleTr == "Price (excl. tax)":
-                priceWithTax = tr.find("td").string
-            elif titleTr == "Price (incl. tax)":
-                priceWithoutTax = tr.find("td").string
-            elif titleTr == "Availability":
-                availabilitySentence = tr.find("td").string.split("(")
-                sentenceSplit = availabilitySentence[1].split()
-                availableValue = sentenceSplit[0]
-
-        # get the product description
-        pTags = bookPage.findAll("p")
-        description = pTags[3].text
-
-        # get the category
-        breadCrumb = bookPage.find("ul", class_="breadcrumb")
-        category = breadCrumb.findAll("a")[2].text
-
-        # get the review rating
-        pTagStars = bookPage.find("p", class_="star-rating")
-        classPTagStars = pTagStars["class"]
-        reviewRating = classPTagStars[1]
-
-        # get the image url
-        imgTag = bookPage.find("div", class_="item active").find("img")
-        imgTitle = imgTag["alt"]
-        imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
-
-        book = [
-            links[i],
-            titleBook,
-            upcValue,
-            priceWithTax,
-            priceWithoutTax,
-            availableValue,
-            imgUrl,
-            description,
-            category,
-            reviewRating,
-        ]
-        books.append(book)
-    else:
-        print("bad res from fetching book url")
-
-# Loading datas
-with open('/Users/nowfeel/Python/book_to_scrape/data/scraps-books.csv', 'w') as csv_file:
-    writer = csv.writer(csv_file, delimiter=",")
-    writer.writerow(headers)
-    for book in books:
-        writer.writerow(book)
-    print("\n ------------ CSV file created ------------ \n")
-
-for book in books:
-    bookImgIndex += 1
-    print("image extracted from book:  " + book[1] + " downloaded")
-    path = os.path.join(imgDirPath + str(bookImgIndex) + "-" + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
-    with open(path, "wb") as file:
-        imgScrap = requests.get(book[6])
-        if res.ok:
-            file.write(imgScrap.content)
+                    book = [
+                        formatLinkBook,
+                        titleBook,
+                        upcValue,
+                        priceWithTax,
+                        priceWithoutTax,
+                        availableValue,
+                        imgUrl,
+                        description,
+                        category,
+                        reviewRating,
+                    ]
+                    books.append(book)
+                else:
+                    print("error during getting the book")
         else:
-            print("error during image's download")
+            categoryNumberPages = int(categoryPage.find("li", class_="current").text.split("of ")[1])
+            print(categoryNumberPages)
+            for indexCategoryPage in range(1, categoryNumberPages + 1, 1):
+                urlCategoryIndex = "https://books.toscrape.com/catalogue/category/books/" + categoryTitleStr + "/page-" + str(indexCategoryPage) + ".html"
+                print(urlCategoryIndex)
+                reqCategoryIndex = requests.get(urlCategoryIndex)
+                if reqCategoryIndex.ok:
+                    categoryIndexPage = BeautifulSoup(reqCategoryIndex.content, "html.parser")
+                    allArticles = categoryPage.find("ol", class_="row").findAll("article", class_="product_pod")
+                    # extract the link for each book
+                    for article in allArticles:
+                        linkBook = article.find("div", class_="image_container").find("a")["href"].split("../")
+                        formatLinkBook = parentUrl + "catalogue/" + linkBook[3]
+                        bookReq = requests.get(formatLinkBook)
+                        if bookReq.ok:
+                            bookPage = BeautifulSoup(bookReq.content, "html.parser")
+                            upcValue = ""
+                            priceWithTax = ""
+                            priceWithoutTax = ""
+                            availableValue = ""
+                            imgUrl = ""
+                            titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
+                            productInfoTable = bookPage.find("table")
+                            allTr = productInfoTable.findAll("tr")
+                            for tr in allTr:
+                                titleTr = tr.find("th").string
+                                if titleTr == "UPC":
+                                    upcValue = tr.find("td").string
+                                elif titleTr == "Price (excl. tax)":
+                                    priceWithTax = tr.find("td").string
+                                elif titleTr == "Price (incl. tax)":
+                                    priceWithoutTax = tr.find("td").string
+                                elif titleTr == "Availability":
+                                    availabilitySentence = tr.find("td").string.split("(")
+                                    sentenceSplit = availabilitySentence[1].split()
+                                    availableValue = sentenceSplit[0]
+                            pTags = bookPage.findAll("p")
+                            description = pTags[3].text
+                            breadCrumb = bookPage.find("ul", class_="breadcrumb")
+                            category = breadCrumb.findAll("a")[2].text
+                            pTagStars = bookPage.find("p", class_="star-rating")
+                            classPTagStars = pTagStars["class"]
+                            reviewRating = classPTagStars[1]
+                            imgTag = bookPage.find("div", class_="item active").find("img")
+                            imgTitle = imgTag["alt"]
+                            imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
+
+                            book = [
+                                formatLinkBook,
+                                titleBook,
+                                upcValue,
+                                priceWithTax,
+                                priceWithoutTax,
+                                availableValue,
+                                imgUrl,
+                                description,
+                                category,
+                                reviewRating,
+                            ]
+                            books.append(book)
+                else:
+                    print("error during fetching the different category's pages")
+    with open('/Users/nowfeel/Python/book_to_scrape/data/' + csvFileName, 'w') as csv_file:
+        writer = csv.writer(csv_file, delimiter=",")
+        for book in books:
+            writer.writerow(book)
+        print("\n CSV File for category: '" + categoryTitle + "' created \n")
+    os.mkdir(imgDirPath)
+    for book in books:
+        path = os.path.join(imgDirPath + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
+        with open(path, "wb") as file:
+            imgScrap = requests.get(book[6])
+            if res.ok:
+                file.write(imgScrap.content)
+            else:
+                print("error during image's download")
+    books.clear()
+else:
+    print("error during getting the books corresponding to the category")
 
