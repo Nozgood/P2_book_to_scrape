@@ -3,10 +3,9 @@ import os
 import csv
 from bs4 import BeautifulSoup
 
-# TODO: ADD FILE PATH AT ENV VARIABLE
-
-def scrap_category(pageToScrap):
-    allArticles = pageToScrap.find("ol", class_="row").findAll("article", class_="product_pod")
+# transform_datas accept a scrapped page and transform datas according to the business need
+def transform_datas(pageToTransform):
+    allArticles = pageToTransform.find("ol", class_="row").findAll("article", class_="product_pod")
     # extract the link for each book
     for article in allArticles:
         linkBook = article.find("div", class_="image_container").find("a")["href"].split("../")
@@ -18,7 +17,6 @@ def scrap_category(pageToScrap):
             priceWithTax = ""
             priceWithoutTax = ""
             availableValue = ""
-            imgUrl = ""
             titleBook = bookPage.find("div", class_="col-sm-6 product_main").find("h1").string
             productInfoTable = bookPage.find("table")
             allTr = productInfoTable.findAll("tr")
@@ -42,7 +40,6 @@ def scrap_category(pageToScrap):
             classPTagStars = pTagStars["class"]
             reviewRating = classPTagStars[1]
             imgTag = bookPage.find("div", class_="item active").find("img")
-            imgTitle = imgTag["alt"]
             imgUrl = imgTag["src"].replace("../../", "https://books.toscrape.com/")
 
             book = [
@@ -58,20 +55,24 @@ def scrap_category(pageToScrap):
                 reviewRating,
             ]
             books.append(book)
+            print("book: " + titleBook + " scrapped")
 
-def store_data(csvName, imgPath, allBooks):
+# store_datas accepts the different path to store, and do it (images and csv file)
+def store_datas(csvName, imgPath, booksToStore):
     with open('/Users/nowfeel/Python/book_to_scrape/data/' + csvName, 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter=",")
         for book in books:
             writer.writerow(book)
         print("\n CSV File for category: '" + categoryTitle + "' created \n")
-    os.mkdir(imgPath)
-    for book in allBooks:
+    if not os.path.exists(imgPath):
+        os.mkdir(imgPath)
+    for book in booksToStore:
         path = os.path.join(imgPath + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
         with open(path, "wb") as file:
             imgScrap = requests.get(book[6])
             if res.ok:
                 file.write(imgScrap.content)
+                print("image for book " + books[1] + " stored")
             else:
                 print("error during image's download")
     books.clear()
@@ -93,7 +94,7 @@ headers = [
     "category",
     "review_rating",
 ]
-allBooks = 0
+allBooksScrapped = 0
 
 res = requests.get(homeUrl)
 if res.ok:
@@ -103,12 +104,13 @@ if res.ok:
     for i in range(len(categoriesList)):
         categoriesLinks.append(categoriesList[i].find("a")["href"])
 else:
-    print("bad response from fetching")
+    print("error during the fetching of the home page")
 
 # Scrap for each category
 for i in range(len(categoriesLinks)):
     categoryReq = requests.get(parentUrl + categoriesLinks[i])
     categoryTitleStr = str(categoriesLinks[i]).split("/")[3]
+    print("Work on this category:  " + categoryTitleStr)
     if categoryReq.ok:
         categoryPage = BeautifulSoup(categoryReq.content, "html.parser")
         categoryTitle = categoryPage.find("div", class_="page-header action").find("h1").text
@@ -116,21 +118,23 @@ for i in range(len(categoriesLinks)):
         imgDirPath = "/Users/nowfeel/Python/book_to_scrape/data/images/" + categoryTitle + "/"
         numberBooksCategory = int(categoryPage.find("form", class_="form-horizontal").find("strong").text)
         if numberBooksCategory < 21:
-            scrap_category(categoryPage)
-            allBooks += int(len(books))
-            store_data(csvFileName, imgDirPath, books)
-            print("total books scrapped: " + str(allBooks))
+            transform_datas(categoryPage)
+            allBooksScrapped += int(len(books))
+            store_datas(csvFileName, imgDirPath, books)
+            print("total books scrapped: " + str(allBooksScrapped))
         else:
             categoryNumberPages = int(categoryPage.find("li", class_="current").text.split("of ")[1])
             for indexCategoryPage in range(1, categoryNumberPages + 1, 1):
-                urlCategoryIndex = "https://books.toscrape.com/catalogue/category/books/" + categoryTitleStr + "/page-" + str(indexCategoryPage) + ".html"
-                print(urlCategoryIndex)
+                urlCategoryIndex = "https://books.toscrape.com/catalogue/category/books/" + categoryTitleStr \
+                    + "/page-" + str(indexCategoryPage) + ".html"
                 reqCategoryIndex = requests.get(urlCategoryIndex)
                 if reqCategoryIndex.ok:
                     categoryIndexPage = BeautifulSoup(reqCategoryIndex.content, "html.parser")
-                    scrap_category(categoryIndexPage)
+                    transform_datas(categoryIndexPage)
                 else:
-                    print("error during fetching the different category's pages")
-            allBooks = allBooks + len(books)
-            store_data(csvFileName, imgDirPath, books)
-            print("total books scrapped: " + str(allBooks))
+                    print("error during the fetching of the different category's pages")
+            allBooksScrapped = allBooksScrapped + len(books)
+            store_datas(csvFileName, imgDirPath, books)
+            print("total books scrapped: " + str(allBooksScrapped))
+    else:
+        print("error during the fetching of the category home page")
