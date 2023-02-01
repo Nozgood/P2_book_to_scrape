@@ -64,18 +64,18 @@ def store_datas(csvName, imgPath, booksToStore):
         writer.writerow(headers)
         for book in booksToStore:
             writer.writerow(book)
-        print("\n CSV File for category: '" + categoryTitle + "' created \n")
-    # if not os.path.exists(imgPath):
-    #     os.mkdir(imgPath)
-    # for book in booksToStore:
-    #     path = os.path.join(imgPath + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
-    #     with open(path, "wb") as file:
-    #         imgScrap = requests.get(book[6])
-    #         if res.ok:
-    #             file.write(imgScrap.content)
-    #             print("image for book " + book[1] + " stored")
-    #         else:
-    #             print("error during image's download")
+    print("\n CSV File for category: '" + categoryTitle + "' created \n")
+    if not os.path.exists(imgPath):
+        os.mkdir(imgPath)
+    for book in booksToStore:
+        path = os.path.join(imgPath + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
+        with open(path, "wb") as file:
+            imgScrap = requests.get(book[6])
+            if res.ok:
+                file.write(imgScrap.content)
+                print("image for book " + book[1] + " stored")
+            else:
+                print("error during image's download")
     books.clear()
 
 
