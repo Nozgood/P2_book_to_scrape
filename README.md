@@ -21,7 +21,7 @@ Follow the steps below to discover how to
 ### Installation
 In the root of the project : 
   - in a terminal type : `python3 -m venv venv` (if you use python 2.x, type python2) and this command : `pip3 install -r requirements.txt`
-  - create a folder called `data`, in this folder create a folder called `images` and a CSV file called `scraps-books`
+  - create a folder called `data`, in this folder create a folder called `images`
   - Finally, always in the terminal, type the command python3 main.py 
 
 All the extracted datas will go to the folder `data` 

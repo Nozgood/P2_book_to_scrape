@@ -61,20 +61,21 @@ def transform_datas(pageToTransform):
 def store_datas(csvName, imgPath, booksToStore):
     with open('/Users/nowfeel/Python/book_to_scrape/data/' + csvName, 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter=",")
-        for book in books:
+        writer.writerow(headers)
+        for book in booksToStore:
             writer.writerow(book)
         print("\n CSV File for category: '" + categoryTitle + "' created \n")
-    if not os.path.exists(imgPath):
-        os.mkdir(imgPath)
-    for book in booksToStore:
-        path = os.path.join(imgPath + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
-        with open(path, "wb") as file:
-            imgScrap = requests.get(book[6])
-            if res.ok:
-                file.write(imgScrap.content)
-                print("image for book " + books[1] + " stored")
-            else:
-                print("error during image's download")
+    # if not os.path.exists(imgPath):
+    #     os.mkdir(imgPath)
+    # for book in booksToStore:
+    #     path = os.path.join(imgPath + book[1].replace(" ", "-").replace("/", "-") + ".jpg")
+    #     with open(path, "wb") as file:
+    #         imgScrap = requests.get(book[6])
+    #         if res.ok:
+    #             file.write(imgScrap.content)
+    #             print("image for book " + book[1] + " stored")
+    #         else:
+    #             print("error during image's download")
     books.clear()
 
 
@@ -110,11 +111,11 @@ else:
 for i in range(len(categoriesLinks)):
     categoryReq = requests.get(parentUrl + categoriesLinks[i])
     categoryTitleStr = str(categoriesLinks[i]).split("/")[3]
-    print("Work on this category:  " + categoryTitleStr)
     if categoryReq.ok:
         categoryPage = BeautifulSoup(categoryReq.content, "html.parser")
         categoryTitle = categoryPage.find("div", class_="page-header action").find("h1").text
-        csvFileName = "scraps-books-" + categoryTitle + ".csv"
+        print("Work on this category:  " + categoryTitle)
+        csvFileName = "scraps-books-" + categoryTitle.replace(" ", "-") + ".csv"
         imgDirPath = "/Users/nowfeel/Python/book_to_scrape/data/images/" + categoryTitle + "/"
         numberBooksCategory = int(categoryPage.find("form", class_="form-horizontal").find("strong").text)
         if numberBooksCategory < 21:
